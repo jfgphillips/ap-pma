@@ -9,10 +9,21 @@ def test_votes():
     init_candidates()
     ballot = polling_stations["PS1"].get_ballot()
 
-
-    voter = Voter(polling_station_name="PS1", voter_name="John Doe", authentication_strategy=NationalInsuranceNumber(ni_number="123456789"))
-    voter_1 = Voter(polling_station_name="PS2", voter_name="John P", authentication_strategy=NationalInsuranceNumber(ni_number="123456791"))
-    invalid_voter = Voter(polling_station_name="PS1", voter_name="John B", authentication_strategy=NationalInsuranceNumber(ni_number="1234567910000"))
+    voter = Voter(
+        polling_station_name="PS1",
+        voter_name="John Doe",
+        authentication_strategy=NationalInsuranceNumber(ni_number="123456789"),
+    )
+    voter_1 = Voter(
+        polling_station_name="PS2",
+        voter_name="John P",
+        authentication_strategy=NationalInsuranceNumber(ni_number="123456791"),
+    )
+    invalid_voter = Voter(
+        polling_station_name="PS1",
+        voter_name="John B",
+        authentication_strategy=NationalInsuranceNumber(ni_number="1234567910000"),
+    )
 
     voter.votes = {CandidateLevel.PRESIDENT: "PP1"}
     voter_1.votes = {CandidateLevel.PRESIDENT: "PP2"}
@@ -25,15 +36,19 @@ def test_votes():
         ballot.cast_votes(voter=voter)
     except ValueError as e:
         print(f"successfully prevented a double vote: {e}")
+
+    # voter at wrong polling station
     try:
         ballot.cast_votes(voter=voter_1)
     except ValueError as e:
         print(f"successfully captured voter at wrong polling station: {e}")
 
+    # failed authentication
     try:
         ballot.cast_votes(voter=invalid_voter)
     except AuthenticationError as e:
         print(f"successfully prevented unauthenticated voter from voting: {e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_votes()

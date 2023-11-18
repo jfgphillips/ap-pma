@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+
 class AuthenticationError(Exception):
     pass
 
@@ -35,10 +36,7 @@ class NationalInsuranceNumber(AuthenticationStrategy):
         return True
 
 
-class FactoryMethod():
-
-
+class FactoryMethod:
     @abstractmethod
     def create(self, *args, **kwargs):
         ...
-

@@ -19,5 +19,6 @@ def test_candidates():
     except KeyError:
         print("validated we cannot register a candidate without a valid area")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_candidates()

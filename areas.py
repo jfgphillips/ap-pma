@@ -6,7 +6,7 @@ from pprint import pprint
 from typing import Dict, Optional, List
 
 from pco import PCO
-from political_party import Candidate, CandidateLevel, init_candidates
+from political_party import Candidate, CandidateLevel
 from voter import Voter
 from authentication import AuthenticationError
 
@@ -198,7 +198,9 @@ class Ballot:
     def validate_votes(self, voter):
         for level, candidate in voter.votes.items():
             if candidate not in self.candidates.candidate_level_map[level].keys():
-                pprint(f"{candidate=} not on ballot. Available candidates are as follows: \n{self.candidates.candidate_level_map[level].keys()}")
+                pprint(
+                    f"{candidate=} not on ballot. Available candidates are as follows: \n{self.candidates.candidate_level_map[level].keys()}"
+                )
                 return False
         return True
 
@@ -249,7 +251,9 @@ class PollingStation(TerminalAreaNode):
         if not voter.authenticate():
             raise AuthenticationError("Authentication Failed, please authenticate with a valid method")
         if not voter.polling_station_name == self.name:
-            raise ValueError(f"voter not registered at this polling station. Please use polling station: {voter.polling_station_name}")
+            raise ValueError(
+                f"voter not registered at this polling station. Please use polling station: {voter.polling_station_name}"
+            )
 
         for candidate_level, candidate_party in voter.votes.items():
             if voter.voter_id in self.already_voted.get(candidate_level, []):
@@ -257,7 +261,6 @@ class PollingStation(TerminalAreaNode):
             candidate = self.candidates.candidate_level_map.get(candidate_level)[candidate_party]
             candidate.votes += 1
             self.already_voted.setdefault(candidate_level, []).append(voter.voter_id)
-
 
 
 def init_structure():
