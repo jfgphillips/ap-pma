@@ -220,7 +220,7 @@ class PollingStation(TerminalAreaNode):
             self.pco.polling_station = self.name
 
         if self.pco.polling_station != self.name:
-            raise ValueError("Cannot instantiate a polling station with unmatching PCO polling station")
+            raise ValueError("Cannot instantiate a polling station with un-matching PCO polling station")
 
     @classmethod
     def from_metadata(cls, metadata):
@@ -245,7 +245,7 @@ class PollingStation(TerminalAreaNode):
 
         return Ballot(candidates=self.candidates, metadata=metadata)
 
-    def vote(self, voter: Voter) -> bool:
+    def vote(self, voter: Voter):
         if not voter.authenticate():
             raise AuthenticationError("Authentication Failed, please authenticate with a valid method")
         if not voter.polling_station_name == self.name:

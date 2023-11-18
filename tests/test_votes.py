@@ -28,12 +28,12 @@ def test_votes():
     try:
         ballot.cast_votes(voter=voter_1)
     except ValueError as e:
-        print(f"successfully captured voter at wrong polling station {e}")
+        print(f"successfully captured voter at wrong polling station: {e}")
 
     try:
         ballot.cast_votes(voter=invalid_voter)
     except AuthenticationError as e:
-        print(f"successfully prevented unauthenticated voter from voting {e}")
+        print(f"successfully prevented unauthenticated voter from voting: {e}")
 
 if __name__ == '__main__':
     test_votes()
