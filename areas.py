@@ -2,24 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from pprint import pprint
+from typing import Dict, Optional, List
 
-from people import CandidateLevel, Candidate, PCO
-
-
-@dataclass
-class PoliticalParty:
-    party_name: str
-
-    def __post_init__(self):
-        from registries import CandidateRegistry
-
-        self.candidate_registry_instance = CandidateRegistry.get_registry(party=self.party_name)
-
-    def register(self, candidate: Candidate):
-        if not candidate.party:
-            candidate.party = self.party_name
-            self.candidate_registry_instance.add_entry(candidate)
+from pco import PCO
+from political_party import Candidate, CandidateLevel, init_candidates
+from voter import Voter
+from authentication import AuthenticationError
 
 
 @dataclass
@@ -36,13 +25,13 @@ class HierarchicalAreaNode(AbstractArea):
     def __post_init__(self):
         from registries import AreaRegistry
 
-        self.area_registry_instance = AreaRegistry.get_registry(self.name, self.__class__.__name__)
+        self.area_registry_instance = AreaRegistry.get_or_create_registry_instance(self.name, self.__class__.__name__)
 
     @property
     def candidates(self):
         from registries import CandidateRegistry
 
-        return CandidateRegistry.get_for_instance(self.name)
+        return CandidateRegistry.get_for_area(self.name)
 
     @abstractmethod
     def add_child(self, child: AbstractArea):
@@ -200,15 +189,16 @@ class Ballot:
     def polling_station(self):
         return PollingStation.from_metadata(self.metadata)
 
-    def cast_votes(self, votes: Dict[CandidateLevel:str]):
-        if not self.validate_votes(votes):
+    def cast_votes(self, voter: Voter):
+        if not self.validate_votes(voter):
             return False
-        self.polling_station.vote(votes)
+        self.polling_station.vote(voter)
         return True
 
-    def validate_votes(self, votes):
-        for level, candidate in votes.items():
+    def validate_votes(self, voter):
+        for level, candidate in voter.votes.items():
             if candidate not in self.candidates.candidate_level_map[level].keys():
+                pprint(f"{candidate=} not on ballot. Available candidates are as follows: \n{self.candidates.candidate_level_map[level].keys()}")
                 return False
         return True
 
@@ -222,13 +212,21 @@ class Ballot:
 @dataclass
 class PollingStation(TerminalAreaNode):
     pco: PCO
+    already_voted: dict[CandidateLevel, List[int]] = field(default_factory=dict)
     parent: Optional[LocalGovernmentArea] = field(default=None)
+
+    def __post_init__(self):
+        if not self.pco.polling_station:
+            self.pco.polling_station = self.name
+
+        if self.pco.polling_station != self.name:
+            raise ValueError("Cannot instantiate a polling station with unmatching PCO polling station")
 
     @classmethod
     def from_metadata(cls, metadata):
         from registries import AreaRegistry
 
-        lgas = AreaRegistry.get_registry(metadata.lga, "LocalGovernmentArea").entries
+        lgas = AreaRegistry.get_or_create_registry_instance(metadata.lga, "LocalGovernmentArea").entries
         polling_station: cls = lgas.get(metadata.polling_station)
         return polling_station
 
@@ -239,33 +237,36 @@ class PollingStation(TerminalAreaNode):
         )
         return metadata
 
-    def get_ballot(self):
+    def get_ballot(self) -> Optional[Ballot]:
+        if not self.parent:
+            print("polling station not registered to a local government area: Returning None")
+            return None
         metadata = self.get_metadata()
 
         return Ballot(candidates=self.candidates, metadata=metadata)
 
-    def vote(self, votes):
-        for candidate_level, candidate_party in votes.items():
+    def vote(self, voter: Voter) -> bool:
+        if not voter.authenticate():
+            raise AuthenticationError("Authentication Failed, please authenticate with a valid method")
+        if not voter.polling_station_name == self.name:
+            raise ValueError(f"voter not registered at this polling station. Please use polling station: {voter.polling_station_name}")
+
+        for candidate_level, candidate_party in voter.votes.items():
+            if voter.voter_id in self.already_voted.get(candidate_level, []):
+                raise ValueError(f"candidate already voted in election {candidate_level}, skipping vote")
             candidate = self.candidates.candidate_level_map.get(candidate_level)[candidate_party]
             candidate.votes += 1
+            self.already_voted.setdefault(candidate_level, []).append(voter.voter_id)
 
 
-area_level_map = {
-    CandidateLevel.PRESIDENT: CountryArea.__name__,
-    CandidateLevel.GOVERNOR: AdministrativeArea.__name__,
-    CandidateLevel.MAYOR: LocalGovernmentArea.__name__,
-    CandidateLevel.MP: Constituency.__name__,
-}
 
-
-if __name__ == "__main__":
+def init_structure():
     p_area = CountryArea("Gwugwuru")
     aas = {}
     for i in range(5):
         a_area = AdministrativeArea(f"AA{i}")
         p_area.add_child(a_area)
         aas[a_area.name] = a_area
-
     c_area = Constituency(f"CS1")
     c_area_2 = Constituency(f"CS2")
     a_area = aas["AA1"]
@@ -275,39 +276,23 @@ if __name__ == "__main__":
         a_area.add_child(lg_area)
         c_area.add_child(lg_area)
         lgas[lg_area.name] = lg_area
-
     a_area_2 = aas["AA2"]
     for i in range(5, 10, 1):
         lg_area = LocalGovernmentArea(f"LGA{i}")
         a_area_2.add_child(lg_area)
         c_area_2.add_child(lg_area)
         lgas[lg_area.name] = lg_area
-
     lg_area = lgas["LGA1"]
     pss = {}
     for i in range(5):
         ps = PollingStation(name=f"PS{i}", pco=PCO())
         lg_area.add_child(ps)
         pss[ps.name] = ps
-
     lg_area_2 = lgas["LGA5"]
     for i in range(5, 10, 1):
-        ps = PollingStation(name=f"PS{i}", pco=PCO())
+        ps_name = f"PS{i}"
+        ps = PollingStation(name=ps_name, pco=PCO())
         lg_area_2.add_child(ps)
+        pss[ps_name] = ps
 
-    candidate = Candidate(level=CandidateLevel.PRESIDENT, name="John Doe", area="Gwugwuru")
-    candidate_2 = Candidate(level=CandidateLevel.MP, name="James B", area="CS1")
-    candidate_3 = Candidate(level=CandidateLevel.MP, name="James B", area="DOESNT_EXIST")
-    party = PoliticalParty(party_name="PP1")
-    party.register(candidate)
-    party.register(candidate_2)
-    party.register(candidate_3)
-
-    print(p_area.area_registry_instance.entries)
-    PollingStation.from_metadata(ps.get_ballot().metadata)
-    ballot = ps.get_ballot()
-    votes = {CandidateLevel.PRESIDENT: "PP1"}
-    for i in range(10):
-        ballot.cast_votes(votes)
-
-    print(p_area.candidates["PP1"].votes)
+    return pss

@@ -1,8 +1,9 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict
-from areas import AbstractArea, area_level_map
-from people import Candidate, CandidateLevel
+from typing import Dict, Optional
+from areas import AbstractArea
+from political_party import Candidate
+from utils import level_area_mapping
 
 
 class BaseRegistryInstance:
@@ -35,13 +36,11 @@ class CandidateRegistryInstance(BaseRegistryInstance):
 
     def add_entry(self, candidate: Candidate):
         if candidate.area in self.entries.keys():
-            print(
-                f"cannot add candidate as there is already a candidate registered {self.entries.get(candidate.instance)}"
+            raise ValueError(
+                f"cannot add candidate as there is already a candidate registered {self.entries.get(candidate.area)}"
             )
-            return
-        if not AreaRegistry.is_registry(area_level_map.get(candidate.level), candidate.area):
-            print("No instance exists")
-            return
+        if not AreaRegistry.is_registry(level_area_mapping.get(candidate.level).__name__, candidate.area):
+            raise KeyError(f"No area instance exists for area {candidate.area}, create this please")
         self.entries[candidate.area] = candidate
 
 
@@ -49,7 +48,7 @@ class AreaRegistry:
     _instances: Dict[str, Dict[str, AreaRegistryInstance]] = {}
 
     @staticmethod
-    def get_registry(registry_name, area) -> AreaRegistryInstance:
+    def get_or_create_registry_instance(registry_name, area) -> AreaRegistryInstance:
         if area not in AreaRegistry._instances:
             AreaRegistry._instances[area] = {}
         if registry_name not in AreaRegistry._instances[area]:
@@ -61,6 +60,9 @@ class AreaRegistry:
     def is_registry(area, registry_name):
         return bool(AreaRegistry._instances.get(area, {}).get(registry_name))
 
+    @staticmethod
+    def get_registries_for_area(area) -> Optional[list]:
+        return list(AreaRegistry._instances.get(area).keys())
 
 class CandidateRegistry:
     _instances: Dict[str, CandidateRegistryInstance] = {}
@@ -72,7 +74,7 @@ class CandidateRegistry:
         return CandidateRegistry._instances[party]
 
     @staticmethod
-    def get_for_instance(instance_name):
+    def get_for_area(instance_name) -> Dict[str, Candidate]:
         candidates = {}
         for party, area_map in CandidateRegistry._instances.items():
             candidate = area_map.entries.get(instance_name)
@@ -80,3 +82,4 @@ class CandidateRegistry:
                 continue
             candidates[party] = candidate
         return candidates
+
