@@ -65,6 +65,12 @@ class TerminalAreaNode(AbstractArea):
 
 @dataclass
 class CountryArea(HierarchicalAreaNode):
+    """
+    The highest geographical entity of the electoral register, in graph terms the root node.
+    This Object can only have children which are added via the add_child method.
+    candidates registered here are all CandidateLevel.PRESIDENT and can be accessed via the candidates
+    property.
+    """
     def add_child(self, child: AdministrativeArea):
         if not child.country_area:
             child.country_area = self
@@ -76,6 +82,18 @@ class CountryArea(HierarchicalAreaNode):
 
 @dataclass
 class AdministrativeArea(HierarchicalAreaNode):
+    """
+    The second-highest geographical entity. These areas have a parent node that is attached when
+    the child is added to its parent e.g.
+    country = CountryArea("MyCountry")
+    ad_area = AdministrativeArea("AA1")
+    country.add_child(ad_area)
+    ad_area.country_area
+    CountryArea("MyCountry")
+    country.area_registry_instance
+    {"AA1" : AdministrativeArea(name="AA1")}
+
+    """
     _country_area: Optional[CountryArea] = None
 
     @property
@@ -97,6 +115,9 @@ class AdministrativeArea(HierarchicalAreaNode):
 
 @dataclass
 class Constituency(HierarchicalAreaNode):
+    """
+    A geographical area that has no parents (similar to CountryArea)
+    """
     def add_child(self, child: LocalGovernmentArea):
         if not child.constituency:
             child.constituency = self
@@ -108,6 +129,10 @@ class Constituency(HierarchicalAreaNode):
 
 @dataclass
 class LocalGovernmentArea(HierarchicalAreaNode):
+    """
+    A hierarchical area with two parent nodes (Constituency and AdministrativeArea)
+
+    """
     _constituency: Optional[Constituency] = None
     _administrative_area: Optional[AdministrativeArea] = None
 
@@ -138,6 +163,9 @@ class LocalGovernmentArea(HierarchicalAreaNode):
 
 @dataclass
 class Metadata:
+    """
+    A metadata helper class that contains the necessary information for a user to retrieve a polling station or Ballot
+    """
     lga: str
     polling_station: str
 
@@ -248,6 +276,18 @@ class PollingStation(TerminalAreaNode):
         return Ballot(candidates=self.candidates, metadata=metadata)
 
     def vote(self, voter: Voter):
+        """
+        A method used to vote at a polling station.
+        Process
+        1. check voter had a valid authenticaiton method (given authentication strategy)
+        2. check the voter is registered at this polling station
+        3. iterate through the voters votes and
+           a) check that the voter has not already voted at this level (1 per CandidateLevel)
+           b) if this is fine. Leverage persistent CandidateRegistryInstance to increment votes on the candidate
+           c) add voter id to the already_voted dictionary given CandidateLevel
+        Parameters
+            voter: a voter object that is used to check voting eligibility and execute votes
+        """
         if not voter.authenticate():
             raise AuthenticationError("Authentication Failed, please authenticate with a valid method")
         if not voter.polling_station_name == self.name:

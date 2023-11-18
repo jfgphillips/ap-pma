@@ -41,7 +41,7 @@ class JsonDataCommand(Command):
         self.cast_vote(metadata, voter)
 
 
-class PdfDataCommand(Command):
+class StrDataCommand(Command):
     def execute(self, data):
         split_string = data.split(",")
         parsed_data = {}
@@ -75,7 +75,7 @@ class Server:
 
     @process.register
     def _(self, data: str):
-        PdfDataCommand().execute(data)
+        StrDataCommand().execute(data)
 
 
 class ClientAPI:
@@ -98,6 +98,5 @@ if __name__ == "__main__":
         voter_name="Jon Doe", voter_id="123456789", pc="PS1", lga="LGA1", votes={"president": "PP1"}
     )
     str_vote = client_api.str_request("voter_name=John P, voter_id=123456789, pc=PS1, lga=LGA1, president_vote=PP1")
-    print(json_vote)
     client_api.send_request(server, str_vote)
     print(get_results(CandidateLevel.PRESIDENT))

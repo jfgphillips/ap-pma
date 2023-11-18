@@ -23,7 +23,7 @@ class AreaRegistryInstance(BaseRegistryInstance):
               Value = the area instance
 
     e.g.
-    p_area = CountryArea("MyCountry")
+    p_area = CountryArea("Gwugwuru")
     a_area = AdminisrativeArea("AA1")
     a_area_2 = AdministrativeArea("AA2")
     p_area.add_child(a_area)
@@ -31,7 +31,7 @@ class AreaRegistryInstance(BaseRegistryInstance):
     p_area.area_registry_instance
     {"AA1": AdministrativeArea(name="AA1"), "AA2": AdministrativeArea(name="AA2")}
     graph looks like:
-              MyCountry
+              Gwugwuru
               /     \
             /        \
           AA1        AA2
@@ -68,7 +68,6 @@ class CandidateRegistryInstance(BaseRegistryInstance):
     party_2.register(candidate_2)
     party.candidate_registry_instance
     {'Gwugwuru': Candidate(level=<CandidateLevel.PRESIDENT: 1>, area='Gwugwuru', name='John Doe', party='PP1', votes=0)}
-
     """
 
     _entries: Dict[str, Candidate] = field(default_factory=dict)
@@ -81,8 +80,8 @@ class CandidateRegistryInstance(BaseRegistryInstance):
     def add_entry(self, candidate: Candidate):
         """
         A method used to add candidates to a political party registry
-
-        :param candidate: the candidate to add to the candidate entries
+        Parameters:
+            candidate (Candidate): the candidate to add to the candidate entries
 
         raises
             ValueError: if there is already a candidate registered for this political party in the same area

@@ -7,6 +7,9 @@ class AuthenticationError(Exception):
 
 
 class AuthenticationStrategy(ABC):
+    """
+    A strategy pattern used for different authentication methods.
+    """
     @abstractmethod
     def authenticate(self):
         pass
