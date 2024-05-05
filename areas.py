@@ -131,7 +131,6 @@ class Constituency(HierarchicalAreaNode):
 class LocalGovernmentArea(HierarchicalAreaNode):
     """
     A hierarchical area with two parent nodes (Constituency and AdministrativeArea)
-
     """
     _constituency: Optional[Constituency] = None
     _administrative_area: Optional[AdministrativeArea] = None
@@ -172,6 +171,9 @@ class Metadata:
 
 @dataclass
 class Candidates:
+    """
+    A helper class used to separate the candidate structure and provide a mapping between candidate dictionaries
+    and candidate levels"""
     presidential_candidates: Dict[str, Candidate]
     governorship_candidates: Dict[str, Candidate]
     mayor_candidates: Dict[str, Candidate]
@@ -189,10 +191,18 @@ class Candidates:
 
 @dataclass
 class Ballot:
+    """
+    A ballot class used in conjunction with PollingStation. Serves the function of providing information to the
+    user on which candidates are available to the voter.
+
+    """
     candidates: Candidates
     metadata: Metadata
 
     def get_voting_card(self):
+        """
+        A method used to introspect the candidates available at each CandidateLevel under this ballot instance.
+        """
         lines = ["Ballot Paper"]
         lines.append("  Presidential Candidates")
         for i, (party, p_candidate) in enumerate(self.candidates.presidential_candidates.items()):
@@ -218,12 +228,14 @@ class Ballot:
         return PollingStation.from_metadata(self.metadata)
 
     def cast_votes(self, voter: Voter):
+        """a method used to cast votes at a polling station"""
         if not self.validate_votes(voter):
             return False
         self.polling_station.vote(voter)
         return True
 
     def validate_votes(self, voter):
+        """checks that the voters votes are valid for this ballot"""
         for level, candidate in voter.votes.items():
             if candidate not in self.candidates.candidate_level_map[level].keys():
                 pprint(
